@@ -1,0 +1,30 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model InventoryItem {
+  id          Int                  @id @default(autoincrement())
+  description String
+  bulk        Float
+  bearer      InventoryItemBearer? @relation(fields: [bearerId], references: [id])
+  bearerId    Int?
+  category    String
+  count       Int
+}
+
+model InventoryItemBearer {
+  id            Int             @id @default(autoincrement())
+  name          String
+  InventoryItem InventoryItem[]
+}

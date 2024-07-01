@@ -1,11 +1,12 @@
 import {
   Links,
   Meta,
+  NavLink,
   Outlet,
   Scripts,
   ScrollRestoration,
 } from "@remix-run/react";
-import "./tailwind.css";
+// import "./tailwind.css";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -17,6 +18,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
+        <nav>
+          <ul>
+            <li>
+              <NavLink to="/item">Items</NavLink>
+            </li>
+            <li>
+              <NavLink to="/bearer">Bearers</NavLink>
+            </li>
+          </ul>
+        </nav>
         {children}
         <ScrollRestoration />
         <Scripts />
