@@ -1,23 +1,43 @@
 import { createRequestHandler } from "@remix-run/express";
 import express from "express";
-
+import { createServer } from "node:http";
+import { Server } from "socket.io";
 
 // eslint-disable-next-line no-undef
-const viteDevServer = process.env.NODE_ENV === 'production' ? null : await import('vite').then(vite => vite.createServer({server: {middlewareMode: true}}));
+const viteDevServer =
+  process.env.NODE_ENV === "production"
+    ? null
+    : await import("vite").then((vite) =>
+        vite.createServer({ server: { middlewareMode: true } }),
+      );
 
 const app = express();
-app.use(viteDevServer ? viteDevServer.middlewares : express.static("build/client"));
+app.use(
+  viteDevServer ? viteDevServer.middlewares : express.static("build/client"),
+);
+
+const httpServer = createServer(app);
+const io = new Server(httpServer);
+
+io.on("connection", (socket) => {
+  const reflect = (ev) => {
+    socket.on(ev, (...args) => io.emit(ev, ...args));
+  }
+  reflect("itemStream");
+});
+
+io.engine.on("connection_error", (err) => {
+  console.log(err.req); // the request object
+  console.log(err.code); // the error code, for example 1
+  console.log(err.message); // the error message, for example "Session ID unknown"
+  console.log(err.context); // some additional error context
+});
 
 const build = viteDevServer
-  ? () =>
-      viteDevServer.ssrLoadModule(
-        "virtual:remix/server-build"
-      )
+  ? () => viteDevServer.ssrLoadModule("virtual:remix/server-build")
   : await import("./build/server/index.js");
-
-// and your app is "just a request handler"
 app.all("*", createRequestHandler({ build }));
 
-app.listen(5173, () => {
+httpServer.listen(5173, () => {
   console.log("App listening on http://localhost:5173");
 });

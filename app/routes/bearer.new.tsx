@@ -8,8 +8,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const data = await request.formData();
   const name = data.get("name");
   invariant(typeof name === "string");
-  const bearer = await prisma.inventoryItemBearer.create({ data: { name } });
-  console.log("Created bearer", bearer);
+  await prisma.inventoryItemBearer.create({ data: { name } });
   return redirect("/bearer");
 }
 
