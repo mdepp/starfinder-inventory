@@ -13,8 +13,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Party {
+  id                   Int                   @id @default(autoincrement())
+  accessGrants         PartyAccessGrant[]
+  inventoryItems       InventoryItem[]
+  inventoryItemBearers InventoryItemBearer[]
+}
+
+model PartyAccessGrant {
+  id       Int    @id @default(autoincrement())
+  partyId  Int
+  party    Party  @relation(fields: [partyId], references: [id])
+  grantKey String
+}
+
 model InventoryItem {
   id          Int                  @id @default(autoincrement())
+  partyId     Int
+  party       Party                @relation(fields: [partyId], references: [id])
   description String
   bulk        Float
   bearer      InventoryItemBearer? @relation(fields: [bearerId], references: [id])
@@ -26,5 +42,7 @@ model InventoryItem {
 model InventoryItemBearer {
   id            Int             @id @default(autoincrement())
   name          String
+  partyId       Int
+  party         Party           @relation(fields: [partyId], references: [id])
   InventoryItem InventoryItem[]
 }

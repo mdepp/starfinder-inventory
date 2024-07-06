@@ -1,7 +1,6 @@
 import {
   Links,
   Meta,
-  NavLink,
   Outlet,
   Scripts,
   ScrollRestoration,
@@ -19,16 +18,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <nav>
-          <ul>
-            <li>
-              <NavLink to="/item">Items</NavLink>
-            </li>
-            <li>
-              <NavLink to="/bearer">Bearers</NavLink>
-            </li>
-          </ul>
-        </nav>
         {children}
         <ScrollRestoration />
         <Scripts />

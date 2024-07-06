@@ -14,6 +14,7 @@ import { io } from "socket.io-client";
 import { z } from "zod";
 import { useSocket } from "~/socket";
 import { prisma } from "~/util/prisma.server";
+import verifyParty from "~/util/verifyParty.server";
 
 const CATEGORY_ORDER = [
   "WEAPON",
@@ -53,7 +54,10 @@ const ACTION_SCHEMA = z.discriminatedUnion("action", [
 
 const socket = io("http://localhost:5173");
 
-export async function loader({ request }: LoaderFunctionArgs) {
+export async function loader({ request, params }: LoaderFunctionArgs) {
+  const { grantKey } = params;
+  const party = await verifyParty(grantKey);
+
   const { searchParams } = new URL(request.url);
 
   const filters = {
@@ -65,7 +69,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const items = prisma.inventoryItem.findMany({
     orderBy: { description: "asc" },
     ...(filters.bearerId.length > 0
-      ? { where: { bearerId: { in: filters.bearerId } } }
+      ? { where: { party, bearerId: { in: filters.bearerId } } }
       : {}),
   });
   const bearers = prisma.inventoryItemBearer.findMany();
@@ -78,7 +82,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
   };
 }
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action({ request, params }: ActionFunctionArgs) {
+  const { grantKey } = params;
+  const party = await verifyParty(grantKey);
   const formData = await request.formData();
 
   const parsedObject = ACTION_SCHEMA.parse(
@@ -87,7 +93,9 @@ export async function action({ request }: ActionFunctionArgs) {
 
   if (parsedObject.action === "newItem") {
     const { action, ...data } = parsedObject;
-    const item = await prisma.inventoryItem.create({ data });
+    const item = await prisma.inventoryItem.create({
+      data: { ...data, partyId: party.id },
+    });
     socket.emit("itemStream", {
       action: "newItem",
       timestamp: new Date().getTime(),
@@ -97,7 +105,10 @@ export async function action({ request }: ActionFunctionArgs) {
   }
   if (parsedObject.action === "updateItem") {
     const { action, id, ...data } = parsedObject;
-    const item = await prisma.inventoryItem.update({ where: { id }, data });
+    const item = await prisma.inventoryItem.update({
+      where: { id, party },
+      data,
+    });
     socket.emit("itemStream", {
       action: "updateItem",
       timestamp: new Date().getTime(),
@@ -107,7 +118,7 @@ export async function action({ request }: ActionFunctionArgs) {
   }
   if (parsedObject.action === "deleteItem") {
     const { id } = parsedObject;
-    const item = await prisma.inventoryItem.delete({ where: { id } });
+    const item = await prisma.inventoryItem.delete({ where: { id, party } });
     socket.emit("itemStream", {
       action: "deleteItem",
       timestamp: new Date().getTime(),
@@ -451,7 +462,7 @@ function NewItem(props: { category: string; bearers: InventoryItemBearer[] }) {
       <input type="hidden" name="category" value={category} />
       <input type="text" name="description" required />
       <UncontrolledBulkSelect name="bulk" />
-      <select name="bearerId" defaultValue={bearers[0].id}>
+      <select name="bearerId" defaultValue={bearers[0]?.id}>
         {bearers.map((bearer) => (
           <option key={bearer.id} value={bearer.id}>
             {bearer.name}

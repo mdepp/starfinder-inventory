@@ -1,17 +1,27 @@
-import { ActionFunctionArgs } from "@remix-run/node";
+import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { Outlet, useFetcher, useLoaderData } from "@remix-run/react";
 import { z } from "zod";
 import { prisma } from "~/util/prisma.server";
+import verifyParty from "~/util/verifyParty.server";
 
 const ACTION_SCHEMA = z.discriminatedUnion("action", [
   z.object({ action: z.literal("deleteBearer"), bearerId: z.coerce.number() }),
 ]);
 
-export async function loader() {
-  return prisma.inventoryItemBearer.findMany({ orderBy: { name: "asc" } });
+export async function loader({ params }: LoaderFunctionArgs) {
+  const { grantKey } = params;
+  const party = await verifyParty(grantKey);
+
+  return prisma.inventoryItemBearer.findMany({
+    where: { party },
+    orderBy: { name: "asc" },
+  });
 }
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action({ request, params }: ActionFunctionArgs) {
+  const { grantKey } = params;
+  const party = await verifyParty(grantKey);
+
   const formData = await request.formData();
 
   const parsedObject = ACTION_SCHEMA.parse(
@@ -20,7 +30,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
   if (parsedObject.action === "deleteBearer") {
     return prisma.inventoryItemBearer.delete({
-      where: { id: parsedObject.bearerId },
+      where: { id: parsedObject.bearerId, party },
     });
   }
 }
