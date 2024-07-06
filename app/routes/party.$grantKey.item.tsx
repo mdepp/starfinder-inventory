@@ -68,9 +68,12 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
   const items = prisma.inventoryItem.findMany({
     orderBy: { description: "asc" },
-    ...(filters.bearerId.length > 0
-      ? { where: { party, bearerId: { in: filters.bearerId } } }
-      : {}),
+    where: {
+      party,
+      ...(filters.bearerId.length > 0
+        ? { bearerId: { in: filters.bearerId } }
+        : {}),
+    },
   });
   const bearers = prisma.inventoryItemBearer.findMany();
   const timestamp = new Date().getTime();
