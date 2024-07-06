@@ -77,6 +77,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
   return {
     timestamp,
+    room: grantKey ?? "",
     filters,
     ...(await promiseHash({ items, bearers })),
   };
@@ -96,7 +97,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     const item = await prisma.inventoryItem.create({
       data: { ...data, partyId: party.id },
     });
-    socket.emit("itemStream", {
+    socket.emit("itemStream", grantKey, {
       action: "newItem",
       timestamp: new Date().getTime(),
       ...item,
@@ -109,7 +110,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       where: { id, party },
       data,
     });
-    socket.emit("itemStream", {
+    socket.emit("itemStream", grantKey, {
       action: "updateItem",
       timestamp: new Date().getTime(),
       ...item,
@@ -119,7 +120,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
   if (parsedObject.action === "deleteItem") {
     const { id } = parsedObject;
     const item = await prisma.inventoryItem.delete({ where: { id, party } });
-    socket.emit("itemStream", {
+    socket.emit("itemStream", grantKey, {
       action: "deleteItem",
       timestamp: new Date().getTime(),
       ...item,
@@ -129,8 +130,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
 }
 
 export default function Items() {
-  const { timestamp, items, bearers, filters } = useLoaderData<typeof loader>();
-  const updates = useSocketUpdates(timestamp);
+  const { timestamp, room, items, bearers, filters } =
+    useLoaderData<typeof loader>();
+  const updates = useSocketUpdates(room, timestamp);
   useRevalidate(updates.length >= 5);
 
   return (
@@ -154,9 +156,13 @@ export default function Items() {
 
 type ActionSchema = ReturnType<(typeof ACTION_SCHEMA)["parse"]>;
 type SocketUpdate = ActionSchema & { timestamp: number };
-function useSocketUpdates(dataTimestamp: number) {
+function useSocketUpdates(room: string, dataTimestamp: number) {
   const socket = useSocket();
   const [updates, setUpdates] = useState<SocketUpdate[]>([]);
+
+  useEffect(() => {
+    socket?.emit("joinRoom", room);
+  }, [room, socket]);
 
   useEffect(() => {
     socket?.on("itemStream", (event) => {

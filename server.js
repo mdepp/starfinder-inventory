@@ -20,11 +20,18 @@ const httpServer = createServer(app);
 const io = new Server(httpServer);
 
 io.on("connection", (socket) => {
+  socket.on("joinRoom", (roomKey) => {
+    socket.join(roomKey);
+  });
+
   const reflect = (ev) => {
-    socket.on(ev, (...args) => io.emit(ev, ...args));
-  }
+    socket.on(ev, (roomKey, ...args) => {
+      io.to(roomKey).emit(ev, ...args);
+    });
+  };
   reflect("itemStream");
 });
+
 
 io.engine.on("connection_error", (err) => {
   console.log(err.req); // the request object
