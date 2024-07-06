@@ -16,6 +16,10 @@ import { useSocket } from "~/socket";
 import { prisma } from "~/util/prisma.server";
 import verifyParty from "~/util/verifyParty.server";
 
+// https://github.com/prisma/prisma/issues/16144#issuecomment-1450369681
+const INT_MAX = Math.pow(2, 31) - 1;
+const INT_MIN = -Math.pow(2, 31);
+
 const CATEGORY_ORDER = [
   "WEAPON",
   "AMMO",
@@ -31,7 +35,7 @@ const ACTION_SCHEMA = z.discriminatedUnion("action", [
     category: z.enum(CATEGORY_ORDER),
     description: z.string().min(1),
     bulk: z.coerce.number(),
-    count: z.coerce.number().default(1),
+    count: z.coerce.number().min(INT_MIN).max(INT_MAX).default(1),
     bearerId: z
       .string()
       .transform((value) => (value === "" ? null : Number(value)))
@@ -43,7 +47,7 @@ const ACTION_SCHEMA = z.discriminatedUnion("action", [
     category: z.enum(CATEGORY_ORDER),
     description: z.string().min(1),
     bulk: z.coerce.number(),
-    count: z.coerce.number(),
+    count: z.coerce.number().min(INT_MIN).max(INT_MAX),
     bearerId: z
       .string()
       .transform((value) => (value === "" ? null : Number(value)))
@@ -387,6 +391,8 @@ function EditableItem(props: {
           type="number"
           name="count"
           required
+          min={INT_MIN}
+          max={INT_MAX}
           pattern="\d+"
           defaultValue={count}
         />
