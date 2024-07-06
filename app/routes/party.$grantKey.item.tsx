@@ -79,7 +79,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
         : {}),
     },
   });
-  const bearers = prisma.inventoryItemBearer.findMany();
+  const bearers = prisma.inventoryItemBearer.findMany({ where: { party } });
   const timestamp = new Date().getTime();
 
   return {
